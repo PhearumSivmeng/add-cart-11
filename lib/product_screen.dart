@@ -52,7 +52,7 @@ class _ProductScreenState extends State<ProductScreen> {
         ),
         body: StreamBuilder(
             stream: product_datas.snapshots(),
-            builder: (context, snapshot) {
+            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
               var list_datas = snapshot.data!.docs;
               List<Product> products = list_datas.map((each) {
                 return Product.fromMap(
@@ -66,7 +66,7 @@ class _ProductScreenState extends State<ProductScreen> {
                         crossAxisCount: 2,
                         mainAxisSpacing: 5,
                         crossAxisSpacing: 5,
-                        childAspectRatio: 3 / 4),
+                        childAspectRatio: 3 / 5),
                     itemCount: products.length,
                     itemBuilder: (context, index) {
                       return Card(
@@ -93,14 +93,42 @@ class _ProductScreenState extends State<ProductScreen> {
                                   fontSize: 20,
                                   color: Colors.red),
                             ),
+                            Text(
+                              '${products[index].qty}',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  color: Colors.red),
+                            ),
                             IconButton(
-                                onPressed: () {
-                                  cart_datas.add({
-                                    'name': products[index].name,
-                                    'price': products[index].price,
-                                    'imageUrl': products[index].imageUrl
-                                  });
-                                  setState(() {});
+                                onPressed: () async {
+                                  DocumentSnapshot doc = await cart_datas
+                                      .doc(products[index].id)
+                                      .get();
+                                  if (doc.exists) {
+                                    Map<String, dynamic> map =
+                                        doc.data() as Map<String, dynamic>;
+                                    var newQty = ++map['qty'];
+                                    // print(newQty);
+                                    if (newQty > products[index].qty) {
+                                      newQty = products[index].qty;
+                                      //  print("Out of Stock");
+                                    }
+                                    // print(newQty);
+                                    cart_datas
+                                        .doc(products[index].id)
+                                        .update({'qty': newQty});
+
+                                    setState(() {});
+                                  } else {
+                                    cart_datas.doc(products[index].id).set({
+                                      'name': products[index].name,
+                                      'price': products[index].price,
+                                      'qty': 1,
+                                      'imageUrl': products[index].imageUrl,
+                                      'max-qty': products[index].qty
+                                    });
+                                  }
                                 },
                                 icon: Icon(
                                   Icons.add_shopping_cart,
